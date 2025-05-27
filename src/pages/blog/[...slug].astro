@@ -1,21 +1,75 @@
 ---
 import { type CollectionEntry, getCollection } from 'astro:content';
 import BlogPost from '../../layouts/BlogPost.astro';
+import WordPressBlogPost from '../../layouts/WordPressBlogPost.astro';
 import { render } from 'astro:content';
+import { getPostBySlug, getLastestPosts } from '../../lib/wp';
 
 export async function getStaticPaths() {
-	const posts = await getCollection('blog');
-	return posts.map((post) => ({
+	// Get static markdown posts
+	const markdownPosts = await getCollection('blog');
+	const markdownPaths = markdownPosts.map((post) => ({
 		params: { slug: post.id },
-		props: post,
+		props: { post, type: 'markdown' },
 	}));
-}
-type Props = CollectionEntry<'blog'>;
 
-const post = Astro.props;
-const { Content } = await render(post);
+	// Get WordPress posts
+	try {
+		const wpPosts = await getLastestPosts({ perPage: 50 });
+		const wpPaths = wpPosts.map((post: any) => ({
+			params: { slug: post.slug },
+			props: { post, type: 'wordpress' },
+		}));
+		
+		return [...markdownPaths, ...wpPaths];
+	} catch (error) {
+		console.warn('Could not fetch WordPress posts for static paths:', error);
+		return markdownPosts;
+	}
+}
+
+type Props = {
+	post: CollectionEntry<'blog'> | any;
+	type: 'markdown' | 'wordpress';
+};
+
+const { post, type } = Astro.props;
+
+let wpPost: any = null;
+
+// Handle WordPress posts
+if (type === 'wordpress') {
+	const { slug } = Astro.params;
+	
+	try {
+		wpPost = await getPostBySlug(slug);
+		if (!wpPost) {
+			return Astro.redirect('/404');
+		}
+	} catch (error) {
+		console.error('Error fetching WordPress post:', error);
+		return Astro.redirect('/404');
+	}
+}
+
+// Handle markdown posts
+let Content: any = null;
+if (type === 'markdown') {
+	const rendered = await render(post);
+	Content = rendered.Content;
+}
 ---
 
-<BlogPost {...post.data}>
-	<Content />
-</BlogPost>
+{type === 'wordpress' && wpPost ? (
+	<WordPressBlogPost 
+		title={wpPost.title}
+		content={wpPost.content}
+		date={wpPost.date}
+		featuredImage={wpPost.featuredImage}
+		excerpt={wpPost.excerpt}
+	/>
+) : type === 'markdown' && Content ? (
+	<BlogPost {...post.data}>
+		<Content />
+	</BlogPost>
+) : null}

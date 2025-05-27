@@ -1,0 +1,65 @@
+---
+export interface Props {
+  title: string;
+  excerpt: string;
+  slug: string;
+  date?: string;
+}
+
+const { title, excerpt, slug, date } = Astro.props;
+
+// Función para limpiar y limitar el excerpt preservando algunos elementos HTML
+const processExcerpt = (html: string) => {
+  // Permitir algunos elementos HTML básicos como <p>, <strong>, <em>, <a>
+  // Remover elementos complejos como <div>, <span> con clases, etc.
+  let cleaned = html
+    .replace(/<(?!\/?(p|strong|b|em|i|a|br)\b)[^>]*>/gi, '') // Remover tags excepto los permitidos
+    .replace(/\s+/g, ' ') // Normalizar espacios
+    .trim();
+  
+  // Limitar longitud
+  if (cleaned.length > 200) {
+    cleaned = cleaned.substring(0, 200);
+    // Encontrar el último espacio para no cortar palabras
+    const lastSpace = cleaned.lastIndexOf(' ');
+    if (lastSpace > 150) {
+      cleaned = cleaned.substring(0, lastSpace);
+    }
+    cleaned += '...';
+  }
+  
+  return cleaned;
+};
+
+// Función para formatear la fecha
+const formatDate = (dateString?: string) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+---
+
+<article class="blog-card">
+  <div class="card-content">
+    <h3>
+      <a href={`/blog/${slug}`} class="card-title">
+        {title}
+      </a>
+    </h3>
+    
+    {date && (
+      <time class="card-date" datetime={date}>
+        {formatDate(date)}
+      </time>
+    )}
+      <div class="card-excerpt wp-content" set:html={processExcerpt(excerpt)} />
+    
+    <a href={`/blog/${slug}`} class="read-more">
+      Leer más →
+    </a>
+  </div>
+</article>

@@ -2,48 +2,254 @@
 import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import BlogCard from '../components/BlogCard.astro';
 import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
+
+import {getLastestPosts, getPageInfo} from "../lib/wp";
+
+const {title, content} = await getPageInfo("bienvenido-a-codevs");
+const posts = await getLastestPosts({ perPage:3});
+
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="es">
 	<head>
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
 	</head>
-	<body>
+	<body class="min-h-screen bg-white dark:bg-neutral-900">
 		<Header />
-		<main>
-			<h1>🧑‍🚀 Hello, Astronaut!</h1>
-			<p>
-				Welcome to the official <a href="https://astro.build/">Astro</a> blog starter template. This
-				template serves as a lightweight, minimally-styled starting point for anyone looking to build
-				a personal website, blog, or portfolio with Astro.
-			</p>
-			<p>
-				This template comes with a few integrations already configured in your
-				<code>astro.config.mjs</code> file. You can customize your setup with
-				<a href="https://astro.build/integrations">Astro Integrations</a> to add tools like Tailwind,
-				React, or Vue to your project.
-			</p>
-			<p>Here are a few ideas on how to get started with the template:</p>
-			<ul>
-				<li>Edit this page in <code>src/pages/index.astro</code></li>
-				<li>Edit the site header items in <code>src/components/Header.astro</code></li>
-				<li>Add your name to the footer in <code>src/components/Footer.astro</code></li>
-				<li>Check out the included blog posts in <code>src/content/blog/</code></li>
-				<li>Customize the blog post page layout in <code>src/layouts/BlogPost.astro</code></li>
-			</ul>
-			<p>
-				Have fun! If you get stuck, remember to
-				<a href="https://docs.astro.build/">read the docs</a>
-				or <a href="https://astro.build/chat">join us on Discord</a> to ask questions.
-			</p>
-			<p>
-				Looking for a blog template with a bit more personality? Check out
-				<a href="https://github.com/Charca/astro-blog-template">astro-blog-template</a>
-				by <a href="https://twitter.com/Charca">Maxi Ferreira</a>.
-			</p>
+		<main class="max-w-4xl mx-auto px-6 py-12">
+			<div class="text-center mb-16">
+				<h1 class="text-4xl md:text-5xl font-bold mb-6 gradient-text text-balance">
+					{title}
+				</h1>
+				<div class="prose prose-lg dark:prose-invert mx-auto text-neutral-700 dark:text-neutral-300" set:html={content} />
+			</div>
 		</main>
+
+		<!-- Próximos Eventos -->
+		<section class="upcoming-events py-16">
+			<div class="max-w-4xl mx-auto px-6">
+				<h2 class="text-3xl md:text-4xl font-bold text-center mb-12 text-primary-900 dark:text-primary-100">
+					📅 Próximos Eventos
+				</h2>
+				<div class="grid md:grid-cols-2 gap-6">
+					<!-- Evento 1 -->
+					<div class="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow duration-200">
+						<div class="flex items-start gap-4">
+							<div class="bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 rounded-lg p-3 text-center min-w-[60px]">
+								<div class="text-sm font-medium">JUN</div>
+								<div class="text-xl font-bold">15</div>
+							</div>
+							<div class="flex-1">
+								<h3 class="text-lg font-semibold mb-2 text-neutral-900 dark:text-neutral-100">
+									Workshop: Introducción a React
+								</h3>
+								<p class="text-neutral-600 dark:text-neutral-400 text-sm mb-3">
+									Aprende los fundamentos de React desde cero con ejemplos prácticos y proyectos reales.
+								</p>
+								<div class="flex items-center gap-4 text-xs text-neutral-500 dark:text-neutral-500">
+									<span>⏰ 19:00 - 21:00</span>
+									<span>📍 Online</span>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Evento 2 -->
+					<div class="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow duration-200">
+						<div class="flex items-start gap-4">
+							<div class="bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 rounded-lg p-3 text-center min-w-[60px]">
+								<div class="text-sm font-medium">JUN</div>
+								<div class="text-xl font-bold">22</div>
+							</div>
+							<div class="flex-1">
+								<h3 class="text-lg font-semibold mb-2 text-neutral-900 dark:text-neutral-100">
+									Meetup: DevOps & CI/CD
+								</h3>
+								<p class="text-neutral-600 dark:text-neutral-400 text-sm mb-3">
+									Charlemos sobre las mejores prácticas en DevOps y automatización de despliegues.
+								</p>
+								<div class="flex items-center gap-4 text-xs text-neutral-500 dark:text-neutral-500">
+									<span>⏰ 18:30 - 20:30</span>
+									<span>📍 Presencial</span>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Evento 3 -->
+					<div class="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow duration-200">
+						<div class="flex items-start gap-4">
+							<div class="bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 rounded-lg p-3 text-center min-w-[60px]">
+								<div class="text-sm font-medium">JUL</div>
+								<div class="text-xl font-bold">05</div>
+							</div>
+							<div class="flex-1">
+								<h3 class="text-lg font-semibold mb-2 text-neutral-900 dark:text-neutral-100">
+									Hackathon: Open Source
+								</h3>
+								<p class="text-neutral-600 dark:text-neutral-400 text-sm mb-3">
+									Contribuye a proyectos open source y aprende colaborando con la comunidad.
+								</p>
+								<div class="flex items-center gap-4 text-xs text-neutral-500 dark:text-neutral-500">
+									<span>⏰ 10:00 - 18:00</span>
+									<span>📍 Híbrido</span>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Ver más eventos -->
+					<div class="bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/30 dark:to-primary-800/30 border border-primary-200 dark:border-primary-700 rounded-xl p-6 flex items-center justify-center">
+						<div class="text-center">
+							<h3 class="text-lg font-semibold mb-2 text-primary-800 dark:text-primary-200">
+								¿Hay más eventos?
+							</h3>
+							<p class="text-primary-600 dark:text-primary-300 text-sm mb-4">
+								Consulta nuestro calendario completo
+							</p>
+							<a href="#" class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
+								Ver calendario
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+								</svg>
+							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+		
+		<section class="latest-posts bg-neutral-50 dark:bg-neutral-800 py-16">
+			<div class="max-w-7xl mx-auto px-6">
+				<h2 class="text-3xl md:text-4xl font-bold text-center mb-12 text-primary-900 dark:text-primary-100">
+					Últimos posts
+				</h2>
+				<div class="posts-grid">
+					{posts.map((post: any) => (
+						<BlogCard 
+							title={post.title}
+							excerpt={post.excerpt}
+							slug={post.slug}
+							date={post.date}
+						/>
+					))}
+				</div>
+				<div class="text-center mt-12">
+					<a href="/blog" class="inline-flex items-center gap-2 bg-primary-900 hover:bg-primary-800 text-white px-8 py-3 rounded-lg font-medium transition-colors duration-200">
+						Ver todos los posts
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+						</svg>
+					</a>
+				</div>
+			</div>
+		</section>
+
+		<!-- Menú de Páginas Adicionales -->
+		<section class="additional-pages py-16">
+			<div class="max-w-7xl mx-auto px-6">
+				<h2 class="text-3xl md:text-4xl font-bold text-center mb-12 text-primary-900 dark:text-primary-100">
+					🚀 Explora más contenido
+				</h2>
+				<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+					<!-- Base de Conocimientos -->
+					<a href="/knowledge-base" class="group bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 hover:scale-105 hover:border-primary-300 dark:hover:border-primary-600">
+						<div class="text-center">
+							<div class="bg-blue-100 dark:bg-blue-900/30 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200 dark:group-hover:bg-blue-800/50 transition-colors duration-300">
+								<svg class="w-7 h-7 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C20.832 18.477 19.246 18 17.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+								</svg>
+							</div>
+							<h3 class="text-lg font-bold mb-2 text-neutral-900 dark:text-neutral-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors duration-300">
+								Base de Conocimientos Técnica
+							</h3>
+							<p class="text-neutral-600 dark:text-neutral-400 text-sm mb-3">
+								Documentación, tutoriales y recursos técnicos organizados por la comunidad
+							</p>
+							<div class="flex items-center justify-center gap-2 text-primary-600 dark:text-primary-400 group-hover:gap-3 transition-all duration-300">
+								<span class="text-sm font-medium">Explorar recursos</span>
+								<svg class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+								</svg>
+							</div>
+						</div>
+					</a>
+
+					<!-- Miembros de la Comunidad -->
+					<a href="/members" class="group bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 hover:scale-105 hover:border-primary-300 dark:hover:border-primary-600">
+						<div class="text-center">
+							<div class="bg-green-100 dark:bg-green-900/30 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-green-200 dark:group-hover:bg-green-800/50 transition-colors duration-300">
+								<svg class="w-7 h-7 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+								</svg>
+							</div>
+							<h3 class="text-lg font-bold mb-2 text-neutral-900 dark:text-neutral-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors duration-300">
+								Miembros de la Comunidad
+							</h3>
+							<p class="text-neutral-600 dark:text-neutral-400 text-sm mb-3">
+								Conoce a los desarrolladores, diseñadores y tech enthusiasts de nuestra comunidad
+							</p>
+							<div class="flex items-center justify-center gap-2 text-primary-600 dark:text-primary-400 group-hover:gap-3 transition-all duration-300">
+								<span class="text-sm font-medium">Ver miembros</span>
+								<svg class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+								</svg>
+							</div>
+						</div>
+					</a>
+
+					<!-- Lab de Proyectos -->
+					<a href="/lab" class="group bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 hover:scale-105 hover:border-primary-300 dark:hover:border-primary-600">
+						<div class="text-center">
+							<div class="bg-purple-100 dark:bg-purple-900/30 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-200 dark:group-hover:bg-purple-800/50 transition-colors duration-300">
+								<svg class="w-7 h-7 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+								</svg>
+							</div>
+							<h3 class="text-lg font-bold mb-2 text-neutral-900 dark:text-neutral-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors duration-300">
+								Lab de Proyectos
+							</h3>
+							<p class="text-neutral-600 dark:text-neutral-400 text-sm mb-3">
+								Experimenta y comparte tus proyectos innovadores
+							</p>
+							<div class="flex items-center justify-center gap-2 text-primary-600 dark:text-primary-400 group-hover:gap-3 transition-all duration-300">
+								<span class="text-sm font-medium">Explorar lab</span>
+								<svg class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+								</svg>
+							</div>
+						</div>
+					</a>
+
+					<!-- Ideas y Feedback -->
+					<a href="/feedback" class="group bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 hover:scale-105 hover:border-primary-300 dark:hover:border-primary-600">
+						<div class="text-center">
+							<div class="bg-orange-100 dark:bg-orange-900/30 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-orange-200 dark:group-hover:bg-orange-800/50 transition-colors duration-300">
+								<svg class="w-7 h-7 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+								</svg>
+							</div>
+							<h3 class="text-lg font-bold mb-2 text-neutral-900 dark:text-neutral-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors duration-300">
+								Ideas y Feedback
+							</h3>
+							<p class="text-neutral-600 dark:text-neutral-400 text-sm mb-3">
+								Comparte ideas y recibe feedback valioso de la comunidad
+							</p>
+							<div class="flex items-center justify-center gap-2 text-primary-600 dark:text-primary-400 group-hover:gap-3 transition-all duration-300">
+								<span class="text-sm font-medium">Dar feedback</span>
+								<svg class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+								</svg>
+							</div>
+						</div>
+					</a>
+				</div>
+			</div>
+		</section>
+
 		<Footer />
 	</body>
 </html>
