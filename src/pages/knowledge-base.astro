@@ -1,0 +1,193 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
+
+// Función para obtener posts de la categoría "Knowledge Base" desde WordPress
+async function getKnowledgeBasePosts() {
+	try {
+		const response = await fetch('http://localhost/wp-json/wp/v2/posts?categories=knowledge-base&per_page=20&_embed');
+		if (!response.ok) {
+			console.error('Error fetching knowledge base posts:', response.status);
+			return [];
+		}
+		const posts = await response.json();
+		return posts.map(post => ({
+			id: post.id,
+			title: post.title.rendered,
+			content: post.content.rendered,
+			excerpt: post.excerpt.rendered,
+			date: post.date,
+			slug: post.slug,
+			featuredImage: post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
+			attachments: post._embedded?.['wp:attachment'] || []
+		}));
+	} catch (error) {
+		console.error('Error fetching knowledge base posts:', error);
+		return [];
+	}
+}
+
+const knowledgePosts = await getKnowledgeBasePosts();
+---
+
+<!doctype html>
+<html lang="es">
+	<head>
+		<BaseHead title={`Base de Conocimientos - ${SITE_TITLE}`} description="Documentación técnica, tutoriales y recursos organizados por la comunidad CODEVS" />
+	</head>
+	<body class="min-h-screen bg-white dark:bg-neutral-900">
+		<Header />
+		
+		<main class="max-w-7xl mx-auto px-6 py-12">
+			<!-- Header Section -->
+			<div class="text-center mb-16">
+				<h1 class="text-4xl md:text-5xl font-bold mb-6 gradient-text">
+					📚 Base de Conocimientos Técnica
+				</h1>
+				<p class="text-lg text-neutral-600 dark:text-neutral-300 max-w-3xl mx-auto">
+					Documentación, tutoriales y recursos técnicos organizados por la comunidad CODEVS. 
+					Encuentra guías, soluciones y mejores prácticas compartidas por desarrolladores experimentados.
+				</p>
+			</div>
+
+			<!-- Knowledge Base Posts Grid -->
+			{knowledgePosts.length > 0 ? (
+				<div class="grid gap-8 md:gap-12">
+					{knowledgePosts.map((post) => (
+						<article class="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow duration-300">
+							{post.featuredImage && (
+								<div class="aspect-video bg-neutral-100 dark:bg-neutral-700">
+									<img 
+										src={post.featuredImage} 
+										alt={post.title}
+										class="w-full h-full object-cover"
+									/>
+								</div>
+							)}
+							
+							<div class="p-8">
+								<div class="flex items-center gap-4 mb-4">
+									<div class="bg-blue-100 dark:bg-blue-900/30 px-3 py-1 rounded-full">
+										<span class="text-blue-800 dark:text-blue-200 text-sm font-medium">📖 Conocimiento Técnico</span>
+									</div>
+									<div class="text-neutral-500 dark:text-neutral-400 text-sm">
+										<FormattedDate date={new Date(post.date)} />
+									</div>
+								</div>
+								
+								<h2 class="text-2xl md:text-3xl font-bold mb-4 text-neutral-900 dark:text-neutral-100">
+									{post.title}
+								</h2>
+								
+								<div class="prose prose-lg dark:prose-invert max-w-none mb-6" set:html={post.excerpt} />
+								
+								<!-- Attachments Section -->
+								{post.attachments.length > 0 && (
+									<div class="mb-6">
+										<h3 class="text-lg font-semibold mb-3 text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+											📎 Archivos Adjuntos
+										</h3>
+										<div class="grid gap-3 md:grid-cols-2">
+											{post.attachments.map((attachment) => (
+												<a 
+													href={attachment.source_url} 
+													target="_blank"
+													class="flex items-center gap-3 p-4 bg-neutral-50 dark:bg-neutral-700 rounded-lg border border-neutral-200 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-600 transition-colors duration-200"
+												>
+													<div class="w-8 h-8 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 rounded text-blue-600 dark:text-blue-400">
+														{attachment.mime_type.includes('pdf') ? '📄' : 
+														 attachment.mime_type.includes('image') ? '🖼️' : 
+														 attachment.mime_type.includes('video') ? '🎥' : 
+														 attachment.mime_type.includes('zip') ? '📦' : '📁'}
+													</div>
+													<div class="flex-1">
+														<div class="font-medium text-neutral-900 dark:text-neutral-100 text-sm">
+															{attachment.title.rendered}
+														</div>
+														<div class="text-xs text-neutral-500 dark:text-neutral-400">
+															{attachment.mime_type} • {Math.round(attachment.media_details?.filesize / 1024) || 0} KB
+														</div>
+													</div>
+													<svg class="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+													</svg>
+												</a>
+											))}
+										</div>
+									</div>
+								)}
+								
+								<!-- Content Preview -->
+								<div class="prose prose-lg dark:prose-invert max-w-none mb-6" set:html={post.content.substring(0, 500) + '...'} />
+								
+								<div class="flex items-center justify-between pt-6 border-t border-neutral-200 dark:border-neutral-700">
+									<a 
+										href={`/blog/${post.slug}`}
+										class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+									>
+										Leer completo
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+										</svg>
+									</a>
+									
+									<div class="flex items-center gap-2 text-neutral-500 dark:text-neutral-400 text-sm">
+										<span>Compartir:</span>
+										<button class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors" title="Copiar enlace">
+											🔗
+										</button>
+									</div>
+								</div>
+							</div>
+						</article>
+					))}
+				</div>
+			) : (
+				<div class="text-center py-16">
+					<div class="w-24 h-24 mx-auto mb-6 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center">
+						<span class="text-4xl">📚</span>
+					</div>
+					<h3 class="text-xl font-semibold mb-3 text-neutral-900 dark:text-neutral-100">
+						Base de Conocimientos en Construcción
+					</h3>
+					<p class="text-neutral-600 dark:text-neutral-400 max-w-md mx-auto mb-6">
+						Estamos preparando contenido técnico valioso. Pronto encontrarás tutoriales, guías y documentación aquí.
+					</p>
+					<a 
+						href="/blog"
+						class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+					>
+						Ver Blog
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+						</svg>
+					</a>
+				</div>
+			)}
+
+			<!-- Call to Action -->
+			<div class="mt-16 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-xl p-8 text-center">
+				<h3 class="text-2xl font-bold mb-4 text-primary-900 dark:text-primary-100">
+					¿Tienes conocimiento que compartir?
+				</h3>
+				<p class="text-primary-700 dark:text-primary-300 mb-6 max-w-2xl mx-auto">
+					La comunidad CODEVS crece cuando compartimos conocimiento. Si tienes experiencia técnica, tutoriales o soluciones útiles, ¡contribuye a nuestra base de conocimientos!
+				</p>
+				<a 
+					href="mailto:codevs@example.com"
+					class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-8 py-3 rounded-lg font-medium transition-colors duration-200"
+				>
+					Contribuir Contenido
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+					</svg>
+				</a>
+			</div>
+		</main>
+		
+		<Footer />
+	</body>
+</html>
