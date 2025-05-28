@@ -6,14 +6,23 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "deploy": "node deploy.js",
+    "deploy:quick": "node quick-deploy.js",
+    "deploy:test": "node test-deploy.js",
+    "deploy:watch": "node deploy-watch.js --watch",
+    "deploy:frontend": "node deploy.js frontend",
+    "deploy:backend": "node deploy.js backend",
+    "validate": "node validate-system.js"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.3.0",
     "@astrojs/rss": "^4.0.11",
     "@astrojs/sitemap": "^3.4.0",
     "@tailwindcss/vite": "^4.1.7",
-    "astro": "^5.8.0"
+    "astro": "^5.8.0",
+    "basic-ftp": "^5.0.5",
+    "ftp-deploy": "^2.4.7"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",
