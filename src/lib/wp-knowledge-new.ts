@@ -41,67 +41,14 @@ export interface WordPressKnowledgePost {
 
 class WordPressKnowledgeService {
   private baseUrl: string;
-  
-  // Cache para mejorar performance
-  private cache: Map<string, { data: any; timestamp: number }> = new Map();
-  private cacheTimeout = 5 * 60 * 1000; // 5 minutos
 
   constructor() {
     // Configura aquí la URL de tu WordPress
     this.baseUrl = 'http://localhost:8881'; // WordPress Studio en puerto 8881
   }
-  // Método para cache con expiración
-  private getCachedData(key: string): any | null {
-    // Limpiar caché caducada ocasionalmente (10% de probabilidad)
-    if (Math.random() < 0.1) {
-      this.cleanExpiredCache();
-    }
-    
-    const cached = this.cache.get(key);
-    if (cached && (Date.now() - cached.timestamp) < this.cacheTimeout) {
-      return cached.data;
-    }
-    this.cache.delete(key);
-    return null;
-  }
 
-  private setCachedData(key: string, data: any): void {
-    this.cache.set(key, { data, timestamp: Date.now() });
-  }
-
-  // Método para limpiar la caché manualmente
-  public clearCache(): void {
-    this.cache.clear();
-    console.log('Cache cleared successfully');
-  }
-
-  // Método para obtener estadísticas de caché
-  public getCacheStats(): { size: number; keys: string[] } {
-    return {
-      size: this.cache.size,
-      keys: Array.from(this.cache.keys())
-    };
-  }
-
-  // Método para limpiar entradas caducadas de la caché
-  private cleanExpiredCache(): void {
-    const now = Date.now();
-    for (const [key, value] of this.cache.entries()) {
-      if ((now - value.timestamp) >= this.cacheTimeout) {
-        this.cache.delete(key);
-      }
-    }
-  }
   async getAllPosts(): Promise<WordPressKnowledgePost[]> {
     try {
-      // Verificar caché primero
-      const cacheKey = 'all-knowledge-posts';
-      const cachedData = this.getCachedData(cacheKey);
-      if (cachedData) {
-        console.log('Returning cached knowledge base posts');
-        return cachedData;
-      }
-
       // Primero obtenemos el ID de la categoría 'knowledge-base'
       const categoryResponse = await fetch(`${this.baseUrl}/wp-json/wp/v2/categories?slug=knowledge-base`);
       
@@ -127,28 +74,15 @@ class WordPressKnowledgeService {
       
       const posts = await response.json();
       
-      const transformedPosts = posts.map((post: any) => this.transformPost(post));
-      
-      // Almacenar en caché
-      this.setCachedData(cacheKey, transformedPosts);
-      console.log(`Cached ${transformedPosts.length} knowledge base posts`);
-      
-      return transformedPosts;
+      return posts.map((post: any) => this.transformPost(post));
     } catch (error) {
       console.error('Error fetching knowledge base posts:', error);
       return [];
     }
   }
+
   async getPostBySlug(slug: string): Promise<WordPressKnowledgePost | null> {
     try {
-      // Verificar caché primero
-      const cacheKey = `knowledge-post-slug-${slug}`;
-      const cachedData = this.getCachedData(cacheKey);
-      if (cachedData) {
-        console.log(`Returning cached knowledge base post: ${slug}`);
-        return cachedData;
-      }
-
       // Primero obtenemos el ID de la categoría 'knowledge-base'
       const categoryResponse = await fetch(`${this.baseUrl}/wp-json/wp/v2/categories?slug=knowledge-base`);
       
@@ -178,28 +112,15 @@ class WordPressKnowledgeService {
         return null;
       }
       
-      const transformedPost = this.transformPost(posts[0]);
-      
-      // Almacenar en caché
-      this.setCachedData(cacheKey, transformedPost);
-      console.log(`Cached knowledge base post: ${slug}`);
-      
-      return transformedPost;
+      return this.transformPost(posts[0]);
     } catch (error) {
       console.error('Error fetching knowledge base post:', error);
       return null;
     }
   }
+
   async getPostById(id: number): Promise<WordPressKnowledgePost | null> {
     try {
-      // Verificar caché primero
-      const cacheKey = `knowledge-post-id-${id}`;
-      const cachedData = this.getCachedData(cacheKey);
-      if (cachedData) {
-        console.log(`Returning cached knowledge base post ID: ${id}`);
-        return cachedData;
-      }
-
       const response = await fetch(`${this.baseUrl}/wp-json/wp/v2/posts/${id}?_embed`);
       
       if (!response.ok) {
@@ -208,13 +129,7 @@ class WordPressKnowledgeService {
       
       const post = await response.json();
       
-      const transformedPost = this.transformPost(post);
-      
-      // Almacenar en caché
-      this.setCachedData(cacheKey, transformedPost);
-      console.log(`Cached knowledge base post ID: ${id}`);
-      
-      return transformedPost;
+      return this.transformPost(post);
     } catch (error) {
       console.error('Error fetching knowledge base post:', error);
       return null;
@@ -255,12 +170,15 @@ class WordPressKnowledgeService {
     const objectives = post.objectives ? 
       post.objectives.split('\n').filter((o: string) => o.trim()) : 
       this.extractObjectives(content);
-      const resources = post.resources ? 
-      (typeof post.resources === 'string' ? JSON.parse(post.resources) : post.resources) : 
-      this.extractResourcesEnhanced(post);
     
-    // Calcular tiempo de lectura mejorado
-    const readingTime = this.calculateReadingTime(post.content?.rendered || '', attachments, resources);
+    const resources = post.resources ? 
+      (typeof post.resources === 'string' ? JSON.parse(post.resources) : post.resources) : 
+      this.extractResources(content);
+    
+    // Calcular tiempo de lectura aproximado
+    const wordCount = post.content?.rendered ? 
+      post.content.rendered.replace(/<[^>]*>/g, '').split(/\s+/).length : 0;
+    const readingTime = Math.max(1, Math.ceil(wordCount / 200)) + ' minutos';
     
     return {
       id: post.id,
@@ -275,7 +193,7 @@ class WordPressKnowledgeService {
       ranking: ranking,
       reading_time: readingTime,
       custom_author: customAuthor,
-      category_slug: specificCategory?.slug || this.smartCategoryDetection(post, tags) || 'other',
+      category_slug: specificCategory?.slug || this.mapCategoryFromTags(tags) || 'other',
       tags_list: tags.filter((tag: any) => tag.taxonomy === 'post_tag').map((tag: any) => tag.name) || [],
       prerequisites: prerequisites,
       objectives: objectives,
@@ -486,197 +404,6 @@ class WordPressKnowledgeService {
     if (url.endsWith('.pdf')) return 'pdf';
     if (url.includes('tutorial') || url.includes('guide')) return 'tutorial';
     return 'link';
-  }
-
-  // Función mejorada para categorización automática inteligente
-  private smartCategoryDetection(post: any, tags: any[]): string {
-    const title = post.title?.rendered?.toLowerCase() || '';
-    const content = post.content?.rendered?.toLowerCase() || '';
-    
-    // Análisis por contenido y palabras clave
-    const contentAnalysis = this.analyzeContentForCategory(title + ' ' + content);
-    
-    // Análisis por tags
-    const tagAnalysis = this.mapCategoryFromTags(tags);
-    
-    // Priorizar análisis de contenido si es específico
-    if (contentAnalysis !== 'other') {
-      return contentAnalysis;
-    }
-    
-    // Fallback a análisis de tags
-    if (tagAnalysis !== 'other') {
-      return tagAnalysis;
-    }
-    
-    return 'other';
-  }
-
-  // Nueva función para analizar contenido y determinar categoría
-  private analyzeContentForCategory(content: string): string {
-    const categoryKeywords = {
-      'frontend': [
-        'react', 'vue', 'angular', 'html', 'css', 'javascript', 'typescript', 'jsx', 'tsx',
-        'dom', 'webpack', 'vite', 'sass', 'scss', 'tailwind', 'bootstrap', 'ui', 'ux',
-        'responsive', 'component', 'hooks', 'state', 'props', 'spa', 'pwa', 'browser'
-      ],
-      'backend': [
-        'node.js', 'express', 'fastify', 'nest.js', 'python', 'django', 'flask', 'fastapi',
-        'java', 'spring', 'php', 'laravel', 'ruby', 'rails', 'go', 'rust', 'c#', '.net',
-        'api', 'rest', 'graphql', 'server', 'middleware', 'authentication', 'authorization'
-      ],
-      'data-science': [
-        'pandas', 'numpy', 'matplotlib', 'seaborn', 'scikit-learn', 'jupyter', 'anaconda',
-        'data analysis', 'data visualization', 'statistics', 'machine learning', 'ml',
-        'dataset', 'dataframe', 'csv', 'excel', 'sql', 'etl', 'big data', 'analytics'
-      ],
-      'ai-ml': [
-        'tensorflow', 'pytorch', 'keras', 'neural network', 'deep learning', 'ai',
-        'artificial intelligence', 'computer vision', 'nlp', 'natural language processing',
-        'classification', 'regression', 'clustering', 'supervised', 'unsupervised',
-        'model', 'training', 'prediction', 'algorithm'
-      ],
-      'devops': [
-        'docker', 'kubernetes', 'aws', 'azure', 'gcp', 'ci/cd', 'jenkins', 'github actions',
-        'deployment', 'infrastructure', 'terraform', 'ansible', 'monitoring', 'logging',
-        'nginx', 'apache', 'load balancer', 'microservices', 'containerization'
-      ],
-      'mobile': [
-        'react native', 'flutter', 'swift', 'kotlin', 'ios', 'android', 'mobile app',
-        'xamarin', 'cordova', 'ionic', 'app store', 'play store', 'responsive design',
-        'mobile development', 'cross-platform', 'native'
-      ],
-      'databases': [
-        'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'oracle', 'sqlite',
-        'database', 'sql', 'nosql', 'query', 'schema', 'migration', 'orm', 'sequelize',
-        'mongoose', 'prisma', 'indexing', 'optimization', 'backup', 'replication'
-      ],
-      'security': [
-        'cybersecurity', 'authentication', 'authorization', 'encryption', 'hashing',
-        'jwt', 'oauth', 'ssl', 'tls', 'vulnerability', 'penetration testing', 'xss',
-        'sql injection', 'csrf', 'security audit', 'firewall', 'vpn'
-      ],
-      'cloud': [
-        'aws', 'azure', 'google cloud', 'gcp', 'cloud computing', 'serverless', 'lambda',
-        'ec2', 's3', 'cloudfront', 'cloud storage', 'auto scaling', 'load balancing',
-        'cdn', 'cloud functions', 'cloud run', 'cloud sql'
-      ],
-      'tools': [
-        'git', 'github', 'gitlab', 'vscode', 'visual studio', 'intellij', 'sublime text',
-        'vim', 'emacs', 'postman', 'insomnia', 'chrome devtools', 'debugging',
-        'linting', 'formatting', 'productivity', 'workflow'
-      ]
-    };
-
-    // Calcular scores por categoría
-    const scores: { [key: string]: number } = {};
-    
-    Object.entries(categoryKeywords).forEach(([category, keywords]) => {
-      scores[category] = 0;
-      keywords.forEach(keyword => {
-        const occurrences = (content.match(new RegExp(keyword, 'gi')) || []).length;
-        scores[category] += occurrences * (keyword.length > 3 ? 2 : 1); // Dar más peso a palabras más específicas
-      });
-    });
-
-    // Encontrar la categoría con mayor score
-    const maxScore = Math.max(...Object.values(scores));
-    if (maxScore >= 3) { // Umbral mínimo para considerar una categoría
-      const bestCategory = Object.entries(scores).find(([, score]) => score === maxScore)?.[0];
-      return bestCategory || 'other';
-    }
-
-    return 'other';
-  }
-  // Función mejorada para calcular tiempo de lectura
-  private calculateReadingTime(content: string, attachments?: any[], resources?: any[]): string {
-    const plainText = content.replace(/<[^>]*>/g, ''); // Remover HTML
-    const wordCount = plainText.split(/\s+/).length;
-    const averageReadingSpeed = 200; // palabras por minuto
-    let minutes = Math.ceil(wordCount / averageReadingSpeed);
-    
-    // Agregar tiempo extra por attachments (asumir 30 segundos por cada uno)
-    if (attachments && attachments.length > 0) {
-      minutes += Math.ceil(attachments.length * 0.5);
-    }
-    
-    // Agregar tiempo extra por recursos externos (asumir 1 minuto por cada uno)
-    if (resources && resources.length > 0) {
-      minutes += resources.length;
-    }
-    
-    if (minutes <= 1) {
-      return '< 1 min';
-    } else if (minutes < 60) {
-      return `${minutes} min`;
-    } else {
-      const hours = Math.floor(minutes / 60);
-      const remainingMinutes = minutes % 60;
-      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
-    }
-  }
-
-  // Función para mejorar la extracción de recursos
-  private extractResourcesEnhanced(post: any): Array<{ title: string; url: string; type: string }> {
-    const resources: Array<{ title: string; url: string; type: string }> = [];
-    
-    // 1. Buscar recursos en campos personalizados
-    if (post.resources && Array.isArray(post.resources)) {
-      resources.push(...post.resources);
-    }
-    
-    // 2. Buscar enlaces externos en el contenido
-    const content = post.content?.rendered || '';
-    const linkRegex = /<a[^>]+href="(https?:\/\/[^"]+)"[^>]*>([^<]+)<\/a>/gi;
-    let match: RegExpExecArray | null;
-    
-    while ((match = linkRegex.exec(content)) !== null) {
-      const url = match[1];
-      const title = match[2];
-      
-      // Filtrar enlaces que no sean del dominio local
-      if (!url.includes('localhost') && !url.includes('codevs.com')) {
-        const resourceType = this.determineResourceType(url, title);
-        
-        // Evitar duplicados
-        if (!resources.some(r => r.url === url)) {
-          resources.push({
-            title: title.trim(),
-            url: url,
-            type: resourceType
-          });
-        }
-      }
-    }
-    
-    return resources;
-  }
-
-  // Función para determinar el tipo de recurso
-  private determineResourceType(url: string, title: string): string {
-    const lowercaseUrl = url.toLowerCase();
-    const lowercaseTitle = title.toLowerCase();
-    
-    if (lowercaseUrl.includes('github.com') || lowercaseTitle.includes('github') || lowercaseTitle.includes('repositorio')) {
-      return 'repository';
-    }
-    if (lowercaseUrl.includes('youtube.com') || lowercaseUrl.includes('vimeo.com') || lowercaseTitle.includes('video')) {
-      return 'video';
-    }
-    if (lowercaseUrl.includes('docs.') || lowercaseTitle.includes('documentación') || lowercaseTitle.includes('docs')) {
-      return 'documentation';
-    }
-    if (lowercaseTitle.includes('tutorial') || lowercaseTitle.includes('guía') || lowercaseTitle.includes('guide')) {
-      return 'tutorial';
-    }
-    if (lowercaseTitle.includes('herramienta') || lowercaseTitle.includes('tool') || lowercaseTitle.includes('app')) {
-      return 'tool';
-    }
-    if (lowercaseTitle.includes('artículo') || lowercaseTitle.includes('article') || lowercaseTitle.includes('blog')) {
-      return 'article';
-    }
-    
-    return 'external-link';
   }
 
   // Métodos utilitarios para la UI
