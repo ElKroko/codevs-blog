@@ -1,57 +1,6 @@
----
-import BaseHead from '../components/BaseHead.astro';
-import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
-import FormattedDate from '../components/FormattedDate.astro';
+/* WordPress Content Styles */
+/* Este archivo contiene estilos específicos para el contenido de WordPress */
 
-export interface Props {
-	title: string;
-	content: string;
-	date: string;
-	featuredImage?: string;
-	excerpt?: string;
-}
-
-const { title, content, date, featuredImage, excerpt } = Astro.props;
----
-
-<html lang="es">
-	<head>
-		<BaseHead title={title} description={excerpt || title} />
-	</head>
-
-	<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen">
-		<Header />
-		<main class="w-full">
-			<article>
-				{featuredImage && (
-					<div class="w-full mb-8">
-						<img 
-							src={featuredImage} 
-							alt={title}
-							class="block mx-auto rounded-xl shadow-2xl max-w-full h-auto"
-							style="max-height: 500px; object-fit: cover;"
-						/>
-					</div>
-				)}
-				<div class="max-w-4xl mx-auto px-4 py-8">
-					<div class="text-center mb-8 border-b border-gray-200 dark:border-gray-700 pb-8">
-						<div class="text-gray-600 dark:text-gray-400 mb-4">
-							<FormattedDate date={new Date(date)} />
-						</div>
-						<h1 class="text-4xl font-bold mb-0 gradient-text">
-							{title}
-						</h1>
-					</div>					<div class="wp-content max-w-none" set:html={content} />
-				</div>
-			</article>
-		</main>
-		<Footer />
-	</body>
-</html>
-
-<style>
-/* WordPress Content Styles for Blog Posts */
 .wp-content {
   line-height: 1.7;
   color: rgb(55, 65, 81);
@@ -253,6 +202,53 @@ const { title, content, date, featuredImage, excerpt } = Astro.props;
   color: rgb(96, 165, 250);
 }
 
+/* Images */
+.wp-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Tables */
+.wp-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  background-color: white;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dark .wp-content table {
+  background-color: rgb(31, 41, 55);
+}
+
+.wp-content th,
+.wp-content td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgb(229, 231, 235);
+}
+
+.dark .wp-content th,
+.dark .wp-content td {
+  border-bottom-color: rgb(55, 65, 81);
+}
+
+.wp-content th {
+  background-color: rgb(249, 250, 251);
+  font-weight: 600;
+  color: rgb(17, 24, 39);
+}
+
+.dark .wp-content th {
+  background-color: rgb(55, 65, 81);
+  color: rgb(243, 244, 246);
+}
+
 /* WordPress specific blocks */
 .wp-content .wp-block-heading {
   margin-top: 2rem;
@@ -313,5 +309,13 @@ const { title, content, date, featuredImage, excerpt } = Astro.props;
     padding: 1rem;
     font-size: 0.8rem;
   }
+  
+  .wp-content table {
+    font-size: 0.875rem;
+  }
+  
+  .wp-content th,
+  .wp-content td {
+    padding: 0.5rem;
+  }
 }
-</style>

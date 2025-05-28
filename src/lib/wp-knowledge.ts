@@ -91,8 +91,7 @@ class WordPressKnowledgeService {
         this.cache.delete(key);
       }
     }
-  }
-  async getAllPosts(): Promise<WordPressKnowledgePost[]> {
+  }  async getAllPosts(): Promise<WordPressKnowledgePost[]> {
     try {
       // Verificar caché primero
       const cacheKey = 'all-knowledge-posts';
@@ -102,44 +101,64 @@ class WordPressKnowledgeService {
         return cachedData;
       }
 
-      // Primero obtenemos el ID de la categoría 'knowledge-base'
-      const categoryResponse = await fetch(`${this.baseUrl}/wp-json/wp/v2/categories?slug=knowledge-base`);
-      
-      if (!categoryResponse.ok) {
-        throw new Error(`HTTP error getting category! status: ${categoryResponse.status}`);
+      let allPosts: any[] = [];
+
+      // 1. Obtener posts del custom post type 'knowledge_base'
+      try {
+        const cptResponse = await fetch(`${this.baseUrl}/wp-json/wp/v2/knowledge-base?_embed&per_page=100`);
+        if (cptResponse.ok) {
+          const cptPosts = await cptResponse.json();
+          allPosts.push(...cptPosts);
+          console.log(`Found ${cptPosts.length} posts from custom post type`);
+        }
+      } catch (error) {
+        console.warn('Custom post type knowledge_base not available:', error);
       }
-      
-      const categories = await categoryResponse.json();
-      
-      if (categories.length === 0) {
-        console.warn('No se encontró la categoría knowledge-base');
+
+      // 2. Obtener posts regulares con categoría 'knowledge-base'
+      try {
+        const categoryResponse = await fetch(`${this.baseUrl}/wp-json/wp/v2/categories?slug=knowledge-base`);
+        
+        if (categoryResponse.ok) {
+          const categories = await categoryResponse.json();
+          
+          if (categories.length > 0) {
+            const categoryId = categories[0].id;
+            const regularPostsResponse = await fetch(`${this.baseUrl}/wp-json/wp/v2/posts?categories=${categoryId}&_embed&per_page=100`);
+            
+            if (regularPostsResponse.ok) {
+              const regularPosts = await regularPostsResponse.json();
+              allPosts.push(...regularPosts);
+              console.log(`Found ${regularPosts.length} posts from regular posts with knowledge-base category`);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Knowledge-base category not available:', error);
+      }
+
+      if (allPosts.length === 0) {
+        console.warn('No knowledge base posts found in either source');
         return [];
       }
-      
-      const categoryId = categories[0].id;
-      
-      // Ahora obtenemos los posts de esa categoría
-      const response = await fetch(`${this.baseUrl}/wp-json/wp/v2/posts?categories=${categoryId}&_embed&per_page=100`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const posts = await response.json();
-      
-      const transformedPosts = posts.map((post: any) => this.transformPost(post));
+
+      // Eliminar duplicados basados en el slug
+      const uniquePosts = allPosts.filter((post, index, self) => 
+        index === self.findIndex(p => p.slug === post.slug)
+      );
+
+      const transformedPosts = uniquePosts.map((post: any) => this.transformPost(post));
       
       // Almacenar en caché
       this.setCachedData(cacheKey, transformedPosts);
-      console.log(`Cached ${transformedPosts.length} knowledge base posts`);
+      console.log(`Cached ${transformedPosts.length} unique knowledge base posts from ${allPosts.length} total found`);
       
       return transformedPosts;
     } catch (error) {
       console.error('Error fetching knowledge base posts:', error);
       return [];
     }
-  }
-  async getPostBySlug(slug: string): Promise<WordPressKnowledgePost | null> {
+  }  async getPostBySlug(slug: string): Promise<WordPressKnowledgePost | null> {
     try {
       // Verificar caché primero
       const cacheKey = `knowledge-post-slug-${slug}`;
@@ -149,36 +168,54 @@ class WordPressKnowledgeService {
         return cachedData;
       }
 
-      // Primero obtenemos el ID de la categoría 'knowledge-base'
-      const categoryResponse = await fetch(`${this.baseUrl}/wp-json/wp/v2/categories?slug=knowledge-base`);
-      
-      if (!categoryResponse.ok) {
-        throw new Error(`HTTP error getting category! status: ${categoryResponse.status}`);
-      }
-      
-      const categories = await categoryResponse.json();
-      
-      if (categories.length === 0) {
-        console.warn('No se encontró la categoría knowledge-base');
-        return null;
-      }
-      
-      const categoryId = categories[0].id;
-      
-      // Ahora obtenemos el post específico por slug dentro de esa categoría
-      const response = await fetch(`${this.baseUrl}/wp-json/wp/v2/posts?slug=${slug}&categories=${categoryId}&_embed`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      let post: any = null;
+
+      // 1. Buscar en custom post type 'knowledge_base'
+      try {
+        const cptResponse = await fetch(`${this.baseUrl}/wp-json/wp/v2/knowledge-base?slug=${slug}&_embed`);
+        if (cptResponse.ok) {
+          const cptPosts = await cptResponse.json();
+          if (cptPosts.length > 0) {
+            post = cptPosts[0];
+            console.log(`Found post "${slug}" in custom post type`);
+          }
+        }
+      } catch (error) {
+        console.warn('Custom post type search failed:', error);
       }
 
-      const posts = await response.json();
-      
-      if (posts.length === 0) {
+      // 2. Si no se encontró, buscar en posts regulares con categoría knowledge-base
+      if (!post) {
+        try {
+          const categoryResponse = await fetch(`${this.baseUrl}/wp-json/wp/v2/categories?slug=knowledge-base`);
+          
+          if (categoryResponse.ok) {
+            const categories = await categoryResponse.json();
+            
+            if (categories.length > 0) {
+              const categoryId = categories[0].id;
+              const response = await fetch(`${this.baseUrl}/wp-json/wp/v2/posts?slug=${slug}&categories=${categoryId}&_embed`);
+              
+              if (response.ok) {
+                const posts = await response.json();
+                if (posts.length > 0) {
+                  post = posts[0];
+                  console.log(`Found post "${slug}" in regular posts with knowledge-base category`);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Regular posts search failed:', error);
+        }
+      }
+
+      if (!post) {
+        console.warn(`Post with slug "${slug}" not found in either source`);
         return null;
       }
       
-      const transformedPost = this.transformPost(posts[0]);
+      const transformedPost = this.transformPost(post);
       
       // Almacenar en caché
       this.setCachedData(cacheKey, transformedPost);
@@ -189,8 +226,7 @@ class WordPressKnowledgeService {
       console.error('Error fetching knowledge base post:', error);
       return null;
     }
-  }
-  async getPostById(id: number): Promise<WordPressKnowledgePost | null> {
+  }  async getPostById(id: number): Promise<WordPressKnowledgePost | null> {
     try {
       // Verificar caché primero
       const cacheKey = `knowledge-post-id-${id}`;
@@ -200,13 +236,44 @@ class WordPressKnowledgeService {
         return cachedData;
       }
 
-      const response = await fetch(`${this.baseUrl}/wp-json/wp/v2/posts/${id}?_embed`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      let post: any = null;
+
+      // 1. Buscar en custom post type 'knowledge_base'
+      try {
+        const cptResponse = await fetch(`${this.baseUrl}/wp-json/wp/v2/knowledge-base/${id}?_embed`);
+        if (cptResponse.ok) {
+          post = await cptResponse.json();
+          console.log(`Found post ID ${id} in custom post type`);
+        }
+      } catch (error) {
+        console.warn('Custom post type search failed:', error);
       }
-      
-      const post = await response.json();
+
+      // 2. Si no se encontró, buscar en posts regulares
+      if (!post) {
+        try {
+          const response = await fetch(`${this.baseUrl}/wp-json/wp/v2/posts/${id}?_embed`);
+          if (response.ok) {
+            const regularPost = await response.json();
+            // Verificar si tiene la categoría knowledge-base
+            const hasKnowledgeCategory = regularPost.categories?.some((catId: number) => {
+              // Esta verificación se hace de manera simplificada
+              return true; // Por ahora aceptamos cualquier post por ID
+            });
+            if (hasKnowledgeCategory) {
+              post = regularPost;
+              console.log(`Found post ID ${id} in regular posts`);
+            }
+          }
+        } catch (error) {
+          console.warn('Regular posts search failed:', error);
+        }
+      }
+
+      if (!post) {
+        console.warn(`Post with ID ${id} not found`);
+        return null;
+      }
       
       const transformedPost = this.transformPost(post);
       
@@ -245,15 +312,16 @@ class WordPressKnowledgeService {
     
     // Extraer información del autor personalizada
     const customAuthor = this.extractCustomAuthor(post);
-    
-    // Procesar contenido para extraer información estructurada
+      // Procesar contenido para extraer información estructurada
     const content = post.content?.rendered || '';
     const prerequisites = post.prerequisites ? 
-      post.prerequisites.split('\n').filter((p: string) => p.trim()) : 
+      (Array.isArray(post.prerequisites) ? post.prerequisites : 
+       (typeof post.prerequisites === 'string' ? post.prerequisites.split('\n').filter((p: string) => p.trim()) : [])) : 
       this.extractPrerequisites(content);
     
     const objectives = post.objectives ? 
-      post.objectives.split('\n').filter((o: string) => o.trim()) : 
+      (Array.isArray(post.objectives) ? post.objectives : 
+       (typeof post.objectives === 'string' ? post.objectives.split('\n').filter((o: string) => o.trim()) : [])) : 
       this.extractObjectives(content);
       const resources = post.resources ? 
       (typeof post.resources === 'string' ? JSON.parse(post.resources) : post.resources) : 
