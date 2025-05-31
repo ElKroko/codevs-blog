@@ -5,14 +5,19 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "build:prod": "NODE_ENV=production astro build --site https://codevs.kroko.cl",
     "preview": "astro preview",
     "astro": "astro",
+    "test:env": "node scripts/test-environments.js",
+    "deploy:build": "npm run build:prod && npm run deploy:upload",
     "deploy": "node deploy.js",
-    "deploy:quick": "node quick-deploy.js",
     "deploy:test": "node test-deploy.js",
     "deploy:watch": "node deploy-watch.js --watch",
     "deploy:frontend": "node deploy.js frontend",
     "deploy:backend": "node deploy.js backend",
+    "deploy:quick": "node deployment/quick-deploy.js",
+    "cache:test": "node deployment/cache-test.js",
+    "cors:test": "node deployment/test-claps-cors.js",
     "validate": "node validate-system.js"
   },
   "dependencies": {
@@ -22,7 +27,10 @@
     "@tailwindcss/vite": "^4.1.7",
     "astro": "^5.8.0",
     "basic-ftp": "^5.0.5",
-    "ftp-deploy": "^2.4.7"
+    "canvas-confetti": "^1.9.3",
+    "ftp-deploy": "^2.4.7",
+    "node-fetch": "^3.3.2",
+    "prismjs": "^1.30.0"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",

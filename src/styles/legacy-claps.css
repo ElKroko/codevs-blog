@@ -1,0 +1,237 @@
+/* Legacy Claps System Styles */
+/* Estilos para el sistema de aplausos anterior (a deprecar) */
+
+/* Claps Container */
+.claps-container {
+  display: flex;
+  justify-content: center;
+  margin: 3rem 0 2rem 0;
+  padding: 2rem 0;
+  border-top: 1px solid rgb(229, 231, 235);
+  border-bottom: 1px solid rgb(229, 231, 235);
+}
+
+.dark .claps-container {
+  border-color: rgb(75, 85, 99);
+}
+
+.claps-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Clap Button */
+.clap-button {
+  position: relative;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clap-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.clap-button:active {
+  transform: translateY(0);
+}
+
+.clap-button.clapped {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+}
+
+.clap-button.clapped:hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+}
+
+.clap-button.pulse {
+  animation: pulseEffect 0.6s ease-out;
+}
+
+.clap-button.error {
+  animation: errorShake 0.5s ease-out;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+/* Clap Icon */
+.clap-icon {
+  display: block;
+  font-size: 1.5rem;
+  transition: transform 0.2s ease;
+}
+
+.clap-button:hover .clap-icon {
+  transform: scale(1.1);
+}
+
+/* Ripple Effect */
+.clap-ripple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+}
+
+.clap-ripple.animate {
+  animation: rippleAnimation 0.6s ease-out;
+}
+
+/* Count Display */
+.clap-count-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.clap-count {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: rgb(59, 130, 246);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dark .clap-count {
+  color: rgb(147, 197, 253);
+}
+
+.clap-label {
+  font-size: 0.875rem;
+  color: rgb(107, 114, 128);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dark .clap-label {
+  color: rgb(156, 163, 175);
+}
+
+/* Thank You Message */
+.thank-you-message {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.thank-you-message.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.thank-you-text {
+  font-size: 0.875rem;
+  color: rgb(16, 185, 129);
+  font-weight: 600;
+  text-align: center;
+  padding: 0.5rem 1rem;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 1rem;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.dark .thank-you-text {
+  color: rgb(52, 211, 153);
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.2);
+}
+
+/* Confetti Animation */
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: 50%;
+  font-size: 1.5rem;
+  animation: confettiFall 2s ease-out forwards;
+}
+
+/* Animations */
+@keyframes rippleAnimation {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes pulseEffect {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes errorShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .clap-button {
+    width: 3.5rem;
+    height: 3.5rem;
+    font-size: 1.25rem;
+  }
+  
+  .clap-count {
+    font-size: 1.25rem;
+  }
+  
+  .clap-label {
+    font-size: 0.75rem;
+  }
+}

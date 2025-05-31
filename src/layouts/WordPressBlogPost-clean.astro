@@ -1,0 +1,235 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import AuthorCard from '../components/AuthorCard.astro';
+import EnhancedClapsSystem from '../components/EnhancedClapsSystem.astro';
+
+export interface Props {
+	title: string;
+	content: string;
+	date: string;
+	modified?: string;
+	featuredImage?: string;
+	excerpt?: string;
+	author?: {
+		name: string;
+		description: string;
+		avatar: string;
+		url?: string;
+	};
+	categories?: Array<{
+		id: number;
+		name: string;
+		slug: string;
+	}>;
+	tags?: Array<{
+		id: number;
+		name: string;
+		slug: string;
+	}>;
+	claps?: number;
+	readingTime?: string;
+	id?: number;
+}
+
+const { 
+	title, 
+	content, 
+	date, 
+	modified,
+	featuredImage, 
+	excerpt, 
+	author, 
+	categories = [], 
+	tags = [], 
+	claps = 0, 
+	readingTime,
+	id 
+} = Astro.props;
+
+// Generate slug from URL or title
+const url = Astro.url.pathname;
+const slug = url.split('/').pop() || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+---
+
+<html lang="es">
+	<head>
+		<BaseHead title={title} description={excerpt || title} />
+		<link rel="stylesheet" href="/src/styles/blog-layout.css" />
+	</head>
+
+	<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen">
+		<Header />
+		<main class="w-full">
+			<article>
+				{featuredImage && (
+					<div class="w-full mb-8">
+						<img 
+							src={featuredImage} 
+							alt={title}
+							class="block mx-auto rounded-xl shadow-2xl max-w-full h-auto"
+							style="max-height: 500px; object-fit: cover;"
+						/>
+					</div>
+				)}
+				
+				<div class="max-w-4xl mx-auto px-4 py-8">
+					<!-- Header Section -->
+					<div class="text-center mb-8 border-b border-gray-200 dark:border-gray-700 pb-8">
+						<div class="text-gray-600 dark:text-gray-400 mb-4">
+							<FormattedDate date={new Date(date)} />
+						</div>
+						<h1 class="text-4xl font-bold mb-0 gradient-text">
+							{title}
+						</h1>
+					</div>
+
+					<!-- Blog Post Information Card -->
+					<div class="blog-info-card">
+						<h2>
+							📊 Información del Artículo
+						</h2>
+						
+						<div class="blog-info-grid">
+							<!-- Popularidad -->
+							<div class="blog-info-item">
+								<div class="blog-info-icon primary">
+									<span>👏</span>
+								</div>
+								<div class="blog-info-content">
+									<div class="label">Popularidad</div>
+									<div class="value">{claps} aplausos</div>
+								</div>
+							</div>
+
+							<!-- Autor -->
+							{author && (
+								<div class="blog-info-item">
+									<div class="avatar-container">
+										{author.avatar ? (
+											<img src={author.avatar} alt={author.name} />
+										) : (
+											<span>👤</span>
+										)}
+									</div>
+									<div class="blog-info-content">
+										<div class="label">Autor</div>
+										<div class="value">{author.name}</div>
+									</div>
+								</div>
+							)}
+
+							<!-- Tiempo de lectura -->
+							{readingTime && (
+								<div class="blog-info-item">
+									<div class="blog-info-icon accent">
+										<span>⏱️</span>
+									</div>
+									<div class="blog-info-content">
+										<div class="label">Lectura</div>
+										<div class="value">{readingTime}</div>
+									</div>
+								</div>
+							)}
+
+							<!-- Fecha de publicación -->
+							<div class="blog-info-item">
+								<div class="blog-info-icon primary">
+									<span>📅</span>
+								</div>
+								<div class="blog-info-content">
+									<div class="label">Publicado</div>
+									<div class="value">
+										{new Date(date).toLocaleDateString('es-ES', {
+											year: 'numeric',
+											month: 'short',
+											day: 'numeric'
+										})}
+									</div>
+								</div>
+							</div>
+
+							<!-- Última actualización -->
+							{modified && modified !== date && (
+								<div class="blog-info-item">
+									<div class="blog-info-icon secondary">
+										<span>🔄</span>
+									</div>
+									<div class="blog-info-content">
+										<div class="label">Actualizado</div>
+										<div class="value">
+											{new Date(modified).toLocaleDateString('es-ES', {
+												year: 'numeric',
+												month: 'short',
+												day: 'numeric'
+											})}
+										</div>
+									</div>
+								</div>
+							)}
+
+							<!-- Categorías -->
+							{categories && categories.length > 0 && (
+								<div class="blog-info-item">
+									<div class="blog-info-icon accent">
+										<span>🏷️</span>
+									</div>
+									<div class="blog-info-content">
+										<div class="label">Categorías</div>
+										<div class="category-tags">
+											{categories.map(category => (
+												<span class="category-tag">
+													{category.name}
+												</span>
+											))}
+										</div>
+									</div>
+								</div>
+							)}
+						</div>
+
+						<!-- Tags section -->
+						{tags && tags.length > 0 && (
+							<div class="tags-section">
+								<div class="tags-label">
+									🔖 Tags:
+								</div>
+								<div class="tags-container">
+									{tags.map(tag => (
+										<span class="tag-item">
+											#{tag.name}
+										</span>
+									))}
+								</div>
+							</div>
+						)}
+					</div>
+
+					<!-- Content -->
+					<div class="wp-content max-w-none" set:html={content} />
+					
+					<!-- Enhanced Author Card -->
+					{author && (
+						<div class="mt-8">
+							<AuthorCard 
+								author={author}
+								publishDate={date}
+								modified={modified}
+							/>
+						</div>
+					)}
+
+					<!-- Enhanced Claps System -->
+					<EnhancedClapsSystem 
+						slug={slug}
+						initialClaps={claps}
+						postTitle={title}
+					/>
+				</div>
+			</article>
+		</main>
+		<Footer />
+	</body>
+</html>

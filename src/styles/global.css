@@ -1,6 +1,10 @@
 /* Tailwind CSS v4 imports */
 @import "tailwindcss";
 
+/* Component Styles */
+@import "./wordpress-content.css";
+@import "./blog-layout.css";
+
 /* Custom properties for CODEVS color palette + Standard Tailwind colors */
 @theme {
   /* Gray scale - Standard Tailwind colors */

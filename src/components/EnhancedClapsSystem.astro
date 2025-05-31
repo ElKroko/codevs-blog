@@ -1,0 +1,741 @@
+---
+interface Props {
+	slug: string;
+	initialClaps?: number;
+	postTitle?: string;
+}
+
+const { slug, initialClaps = 0, postTitle = 'este artículo' } = Astro.props;
+---
+
+<div class="claps-system-enhanced">
+	<div class="claps-container">
+		<!-- Claps counter display -->
+		<div class="claps-stats">
+			<div class="claps-count-container">
+				<span id="total-claps" class="total-claps">{initialClaps}</span>
+				<span class="claps-label">aplausos totales</span>
+			</div>
+			<div class="claps-separator"></div>
+			<div class="user-claps-container">
+				<span id="user-claps" class="user-claps">0</span>
+				<span class="claps-label">tus aplausos</span>
+			</div>
+		</div>
+
+		<!-- Main clap button -->
+		<div class="clap-button-container">
+			<button 
+				id="enhanced-clap-button" 
+				class="enhanced-clap-button"
+				aria-label="Aplaudir este artículo"
+				data-slug={slug}
+				data-title={postTitle}
+			>
+				<div class="clap-icon-container">
+					<span class="clap-icon">👏</span>
+					<div class="clap-ripple"></div>
+					<div class="clap-burst"></div>
+				</div>
+				<span class="clap-text">¡Dale un aplauso!</span>
+			</button>
+		</div>
+
+		<!-- Status messages -->
+		<div class="claps-messages">
+			<div id="success-message" class="message success-message">
+				<span class="message-icon">🎉</span>
+				<span class="message-text">¡Gracias por tu aplauso!</span>
+			</div>
+			<div id="limit-message" class="message limit-message">
+				<span class="message-icon">👏</span>
+				<span class="message-text">¡Ya alcanzaste el límite de aplausos!</span>
+			</div>
+			<div id="error-message" class="message error-message">
+				<span class="message-icon">❌</span>
+				<span class="message-text">Error al enviar aplauso. Inténtalo de nuevo.</span>
+			</div>
+		</div>
+
+		<!-- Claps visualization -->
+		<div class="claps-visualization">
+			<div class="claps-bar-container">
+				<div id="claps-progress-bar" class="claps-progress-bar"></div>
+			</div>
+			<div class="claps-milestones">
+				<span class="milestone" data-milestone="10">10</span>
+				<span class="milestone" data-milestone="25">25</span>
+				<span class="milestone" data-milestone="50">50</span>
+				<span class="milestone" data-milestone="100">100</span>
+			</div>
+		</div>
+	</div>
+
+	<!-- Floating clap particles -->
+	<div id="clap-particles-container" class="clap-particles-container"></div>
+</div>
+
+<script is:inline>
+	class EnhancedClapsSystem {
+		constructor() {
+			this.button = null;
+			this.totalClapsEl = null;
+			this.userClapsEl = null;
+			this.progressBar = null;
+			this.particlesContainer = null;
+			this.messages = {};
+			
+			this.slug = '';
+			this.totalClaps = 0;
+			this.userClaps = 0;
+			this.maxUserClaps = 10;
+			this.isAnimating = false;
+			
+			this.wpDomain = 'https://cms.kroko.cl';
+			this.storageKey = '';
+			
+			this.init();
+		}
+
+		async init() {
+			try {
+				// Get DOM elements
+				this.button = document.getElementById('enhanced-clap-button');
+				this.totalClapsEl = document.getElementById('total-claps');
+				this.userClapsEl = document.getElementById('user-claps');
+				this.progressBar = document.getElementById('claps-progress-bar');
+				this.particlesContainer = document.getElementById('clap-particles-container');
+				
+				// Get message elements
+				this.messages = {
+					success: document.getElementById('success-message'),
+					limit: document.getElementById('limit-message'),
+					error: document.getElementById('error-message')
+				};
+
+				if (!this.button || !this.totalClapsEl || !this.userClapsEl) {
+					console.error('Claps system elements not found');
+					return;
+				}
+
+				// Get slug and initial data
+				this.slug = this.button.dataset.slug || this.getSlugFromURL();
+				this.storageKey = `codevs_claps_${this.slug}`;
+				this.totalClaps = parseInt(this.totalClapsEl.textContent) || 0;
+				
+				// Load user claps from localStorage
+				this.loadUserClaps();
+				
+				// Setup event listeners
+				this.setupEventListeners();
+				
+				// Load current claps from server
+				await this.loadCurrentClaps();
+				
+				// Update UI
+				this.updateUI();
+				
+				console.log('Enhanced claps system initialized');
+			} catch (error) {
+				console.error('Error initializing enhanced claps system:', error);
+			}
+		}
+
+		setupEventListeners() {
+			this.button.addEventListener('click', (e) => this.handleClap(e));
+			
+			// Add keyboard support
+			this.button.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					this.handleClap(e);
+				}
+			});
+
+			// Add hold-to-clap functionality
+			let holdTimer = null;
+			let holdCount = 0;
+			
+			const startHold = () => {
+				holdTimer = setInterval(() => {
+					if (this.userClaps < this.maxUserClaps && !this.isAnimating) {
+						this.handleClap();
+						holdCount++;
+						if (holdCount >= 5) clearInterval(holdTimer); // Max 5 rapid claps
+					}
+				}, 150);
+			};
+			
+			const endHold = () => {
+				if (holdTimer) {
+					clearInterval(holdTimer);
+					holdTimer = null;
+					holdCount = 0;
+				}
+			};
+
+			this.button.addEventListener('mousedown', startHold);
+			this.button.addEventListener('mouseup', endHold);
+			this.button.addEventListener('mouseleave', endHold);
+			this.button.addEventListener('touchstart', startHold);
+			this.button.addEventListener('touchend', endHold);
+		}
+
+		async handleClap(event) {
+			if (this.isAnimating || this.userClaps >= this.maxUserClaps) {
+				if (this.userClaps >= this.maxUserClaps) {
+					this.showMessage('limit');
+					this.addPulseEffect();
+				}
+				return;
+			}
+
+			this.isAnimating = true;
+
+			try {
+				// Optimistic update
+				this.userClaps++;
+				this.totalClaps++;
+				this.saveUserClaps();
+				this.updateUI();
+				
+				// Visual effects
+				this.addRippleEffect();
+				this.createParticles(event);
+				this.animateButton();
+				
+				// API call
+				const response = await fetch(`${this.wpDomain}/wp-json/codevs/v1/claps/${this.slug}`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					}
+				});
+
+				if (response.ok) {
+					const data = await response.json();
+					this.totalClaps = data.claps || this.totalClaps;
+					this.updateUI();
+					this.showMessage('success');
+					
+					// Achievement check
+					this.checkAchievements();				} else {
+					// API failed, keep optimistic update but log error
+					console.log('API failed:', response.status, response.statusText);
+					this.showMessage('success'); // Still show success for better UX
+				}
+			} catch (error) {
+				console.log('Network error, keeping optimistic update:', error);
+				// Keep optimistic update, just show success message
+				this.showMessage('success');
+			} finally {
+				setTimeout(() => {
+					this.isAnimating = false;
+				}, 300);
+			}
+		}
+		async loadCurrentClaps() {
+			try {
+				const response = await fetch(`${this.wpDomain}/wp-json/codevs/v1/claps/${this.slug}`, {
+					method: 'GET',
+					headers: {
+						'Accept': 'application/json'
+					},
+					credentials: 'omit'
+				});
+				
+				if (response.ok) {
+					const data = await response.json();
+					if (data.success && typeof data.claps === 'number') {
+						this.totalClaps = data.claps;
+						this.updateUI();
+					}
+				} else {
+					console.log('Could not load claps from server, using initial value');
+				}
+			} catch (error) {
+				console.log('Network error loading claps, using initial value:', error);
+				// Keep using the initial claps value from the server render
+			}
+		}
+
+		loadUserClaps() {
+			const saved = localStorage.getItem(this.storageKey);
+			this.userClaps = saved ? parseInt(saved) : 0;
+		}
+
+		saveUserClaps() {
+			localStorage.setItem(this.storageKey, this.userClaps.toString());
+		}
+
+		updateUI() {
+			// Update counters
+			this.totalClapsEl.textContent = this.totalClaps.toString();
+			this.userClapsEl.textContent = this.userClaps.toString();
+			
+			// Update progress bar
+			const progress = Math.min((this.totalClaps / 100) * 100, 100);
+			this.progressBar.style.width = `${progress}%`;
+			
+			// Update milestones
+			const milestones = document.querySelectorAll('.milestone');
+			milestones.forEach(milestone => {
+				const value = parseInt(milestone.dataset.milestone);
+				if (this.totalClaps >= value) {
+					milestone.classList.add('achieved');
+				}
+			});
+			
+			// Update button state
+			if (this.userClaps >= this.maxUserClaps) {
+				this.button.classList.add('maxed-out');
+				this.button.querySelector('.clap-text').textContent = '¡Máximo alcanzado!';
+			} else {
+				this.button.classList.remove('maxed-out');
+				this.button.querySelector('.clap-text').textContent = `¡Dale un aplauso! (${this.userClaps}/${this.maxUserClaps})`;
+			}
+		}
+
+		addRippleEffect() {
+			const ripple = this.button.querySelector('.clap-ripple');
+			ripple.classList.remove('animate');
+			setTimeout(() => ripple.classList.add('animate'), 10);
+		}
+
+		addPulseEffect() {
+			this.button.classList.add('pulse');
+			setTimeout(() => this.button.classList.remove('pulse'), 600);
+		}
+
+		animateButton() {
+			this.button.classList.add('clapping');
+			setTimeout(() => this.button.classList.remove('clapping'), 300);
+		}
+
+		createParticles(event) {
+			const rect = this.button.getBoundingClientRect();
+			const centerX = rect.left + rect.width / 2;
+			const centerY = rect.top + rect.height / 2;
+
+			for (let i = 0; i < 8; i++) {
+				this.createParticle(centerX, centerY);
+			}
+		}
+
+		createParticle(x, y) {
+			const particle = document.createElement('div');
+			particle.className = 'clap-particle';
+			particle.textContent = ['👏', '✨', '🎉', '⭐', '💫'][Math.floor(Math.random() * 5)];
+			
+			const angle = (Math.PI * 2 * Math.random());
+			const distance = 50 + Math.random() * 50;
+			const endX = x + Math.cos(angle) * distance;
+			const endY = y + Math.sin(angle) * distance;
+			
+			particle.style.position = 'fixed';
+			particle.style.left = x + 'px';
+			particle.style.top = y + 'px';
+			particle.style.fontSize = '20px';
+			particle.style.pointerEvents = 'none';
+			particle.style.zIndex = '9999';
+			particle.style.transition = 'all 1s ease-out';
+			
+			document.body.appendChild(particle);
+			
+			setTimeout(() => {
+				particle.style.left = endX + 'px';
+				particle.style.top = endY + 'px';
+				particle.style.opacity = '0';
+				particle.style.transform = 'scale(0.5)';
+			}, 10);
+			
+			setTimeout(() => {
+				document.body.removeChild(particle);
+			}, 1000);
+		}
+
+		showMessage(type) {
+			Object.values(this.messages).forEach(msg => msg?.classList.remove('visible'));
+			
+			if (this.messages[type]) {
+				this.messages[type].classList.add('visible');
+				setTimeout(() => {
+					this.messages[type].classList.remove('visible');
+				}, 3000);
+			}
+		}
+
+		checkAchievements() {
+			const milestones = [10, 25, 50, 100];
+			const achieved = milestones.find(m => this.totalClaps === m);
+			
+			if (achieved) {
+				this.showAchievement(achieved);
+			}
+		}
+
+		showAchievement(milestone) {
+			const achievement = document.createElement('div');
+			achievement.className = 'achievement-notification';
+			achievement.innerHTML = `
+				<div class="achievement-content">
+					<span class="achievement-icon">🏆</span>
+					<div class="achievement-text">
+						<strong>¡Logro desbloqueado!</strong>
+						<br>¡${milestone} aplausos alcanzados!
+					</div>
+				</div>
+			`;
+			
+			document.body.appendChild(achievement);
+			
+			setTimeout(() => achievement.classList.add('visible'), 100);
+			setTimeout(() => {
+				achievement.classList.remove('visible');
+				setTimeout(() => document.body.removeChild(achievement), 300);
+			}, 4000);
+		}
+
+		getSlugFromURL() {
+			const path = window.location.pathname;
+			return path.split('/').pop() || 'default-slug';
+		}
+	}
+
+	// Initialize when DOM is loaded
+	document.addEventListener('DOMContentLoaded', () => {
+		new EnhancedClapsSystem();
+	});
+</script>
+
+<style>
+.claps-system-enhanced {
+	margin: 3rem 0;
+	padding: 2rem;
+	background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+	border-radius: 1.5rem;
+	border: 1px solid rgb(229, 231, 235);
+	position: relative;
+	overflow: hidden;
+}
+
+.dark .claps-system-enhanced {
+	background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(147, 51, 234, 0.05));
+	border-color: rgb(75, 85, 99);
+}
+
+.claps-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1.5rem;
+}
+
+.claps-stats {
+	display: flex;
+	align-items: center;
+	gap: 2rem;
+	padding: 1rem 2rem;
+	background: rgba(255, 255, 255, 0.8);
+	backdrop-filter: blur(10px);
+	border-radius: 2rem;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.dark .claps-stats {
+	background: rgba(17, 24, 39, 0.8);
+	border-color: rgba(255, 255, 255, 0.1);
+}
+
+.claps-count-container, .user-claps-container {
+	text-align: center;
+}
+
+.total-claps, .user-claps {
+	display: block;
+	font-size: 2rem;
+	font-weight: 800;
+	background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	line-height: 1;
+}
+
+.claps-label {
+	display: block;
+	font-size: 0.75rem;
+	color: rgb(107, 114, 128);
+	margin-top: 0.25rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.dark .claps-label {
+	color: rgb(156, 163, 175);
+}
+
+.claps-separator {
+	width: 1px;
+	height: 3rem;
+	background: linear-gradient(to bottom, transparent, rgb(209, 213, 219), transparent);
+}
+
+.dark .claps-separator {
+	background: linear-gradient(to bottom, transparent, rgb(75, 85, 99), transparent);
+}
+
+.clap-button-container {
+	position: relative;
+}
+
+.enhanced-clap-button {
+	position: relative;
+	padding: 1rem 2rem;
+	background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+	color: white;
+	border: none;
+	border-radius: 2rem;
+	font-size: 1rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	min-width: 200px;
+	justify-content: center;
+}
+
+.enhanced-clap-button:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 15px 35px rgba(59, 130, 246, 0.4);
+}
+
+.enhanced-clap-button.maxed-out {
+	background: linear-gradient(135deg, #10b981, #059669);
+	box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+}
+
+.enhanced-clap-button.clapping {
+	transform: scale(0.95);
+}
+
+.enhanced-clap-button.pulse {
+	animation: pulse 0.6s ease-in-out;
+}
+
+.clap-icon-container {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.clap-icon {
+	font-size: 1.5rem;
+	transition: transform 0.2s ease;
+}
+
+.enhanced-clap-button.clapping .clap-icon {
+	transform: scale(1.3) rotate(15deg);
+}
+
+.clap-ripple {
+	position: absolute;
+	inset: 0;
+	background: rgba(255, 255, 255, 0.3);
+	border-radius: inherit;
+	transform: scale(0);
+	opacity: 0;
+}
+
+.clap-ripple.animate {
+	animation: ripple 0.6s ease-out;
+}
+
+.claps-messages {
+	position: relative;
+	height: 2rem;
+}
+
+.message {
+	position: absolute;
+	top: 0;
+	left: 50%;
+	transform: translateX(-50%);
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 1rem;
+	border-radius: 1rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+	opacity: 0;
+	transition: all 0.3s ease;
+	white-space: nowrap;
+}
+
+.message.visible {
+	opacity: 1;
+	transform: translateX(-50%) translateY(-10px);
+}
+
+.success-message {
+	background: #10b981;
+	color: white;
+}
+
+.limit-message {
+	background: #f59e0b;
+	color: white;
+}
+
+.error-message {
+	background: #ef4444;
+	color: white;
+}
+
+.claps-visualization {
+	width: 100%;
+	max-width: 400px;
+}
+
+.claps-bar-container {
+	width: 100%;
+	height: 8px;
+	background: rgba(209, 213, 219, 0.3);
+	border-radius: 4px;
+	overflow: hidden;
+	margin-bottom: 0.5rem;
+}
+
+.dark .claps-bar-container {
+	background: rgba(75, 85, 99, 0.3);
+}
+
+.claps-progress-bar {
+	height: 100%;
+	background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+	width: 0%;
+	transition: width 0.3s ease;
+	border-radius: 4px;
+}
+
+.claps-milestones {
+	display: flex;
+	justify-content: space-between;
+	padding: 0 0.5rem;
+}
+
+.milestone {
+	font-size: 0.75rem;
+	color: rgb(107, 114, 128);
+	font-weight: 600;
+	transition: all 0.3s ease;
+}
+
+.milestone.achieved {
+	color: #3b82f6;
+	transform: scale(1.1);
+}
+
+.dark .milestone {
+	color: rgb(156, 163, 175);
+}
+
+.dark .milestone.achieved {
+	color: #60a5fa;
+}
+
+.clap-particles-container {
+	position: fixed;
+	top: 0;
+	left: 0;
+	pointer-events: none;
+	z-index: 9999;
+}
+
+.achievement-notification {
+	position: fixed;
+	top: 2rem;
+	right: 2rem;
+	background: linear-gradient(135deg, #10b981, #059669);
+	color: white;
+	padding: 1rem;
+	border-radius: 1rem;
+	box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+	transform: translateX(100%);
+	transition: transform 0.3s ease;
+	z-index: 10000;
+}
+
+.achievement-notification.visible {
+	transform: translateX(0);
+}
+
+.achievement-content {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.achievement-icon {
+	font-size: 2rem;
+}
+
+.achievement-text {
+	font-size: 0.875rem;
+	line-height: 1.4;
+}
+
+@keyframes ripple {
+	to {
+		transform: scale(2);
+		opacity: 0;
+	}
+}
+
+@keyframes pulse {
+	0%, 100% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(1.05);
+	}
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+	.claps-system-enhanced {
+		margin: 2rem 0;
+		padding: 1.5rem;
+	}
+
+	.claps-stats {
+		gap: 1rem;
+		padding: 0.75rem 1.5rem;
+	}
+
+	.total-claps, .user-claps {
+		font-size: 1.5rem;
+	}
+
+	.enhanced-clap-button {
+		padding: 0.75rem 1.5rem;
+		font-size: 0.875rem;
+		min-width: 180px;
+	}
+
+	.claps-milestones {
+		padding: 0;
+	}
+
+	.achievement-notification {
+		right: 1rem;
+		left: 1rem;
+		right: 1rem;
+	}
+}
+</style>

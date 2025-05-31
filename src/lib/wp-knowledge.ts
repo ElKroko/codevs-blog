@@ -47,8 +47,17 @@ class WordPressKnowledgeService {
   private cacheTimeout = 5 * 60 * 1000; // 5 minutos
 
   constructor() {
-    // Configura aquí la URL de tu WordPress
-    this.baseUrl = 'http://localhost:8881'; // WordPress Studio en puerto 8881
+
+    const isProduction = import.meta.env.PROD || import.meta.env.NODE_ENV === 'production';
+
+    if (isProduction) {
+      // Configura aquí la URL de tu WordPress
+      this.baseUrl = import.meta.env.WP_API_URL || 'https://cms.kroko.cl/wp-json/wp/v2'; // WordPress Studio en puerto 8881
+    } else {
+      this.baseUrl = 'http://localhost:8881/wp-json/wp/v2'; // WordPress Studio en puerto 8881
+    }
+    
+    console.log(`🌐 WordPress API URL: ${this.baseUrl}`);
   }
   // Método para cache con expiración
   private getCachedData(key: string): any | null {

@@ -65,8 +65,15 @@ if (type === 'markdown') {
 		title={wpPost.title}
 		content={wpPost.content}
 		date={wpPost.date}
+		modified={wpPost.modified}
 		featuredImage={wpPost.featuredImage}
 		excerpt={wpPost.excerpt}
+		author={wpPost.author}
+		categories={wpPost.categories}
+		tags={wpPost.tags}
+		claps={wpPost.claps}
+		readingTime={wpPost.readingTime}
+		id={wpPost.id}
 	/>
 ) : type === 'markdown' && Content ? (
 	<BlogPost {...post.data}>
