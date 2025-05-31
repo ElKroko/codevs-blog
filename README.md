@@ -1,5 +1,8 @@
 # Astro Starter Kit: Blog
 
+## 📚 Documentacion del proyecto
+Si no estas familiarizado con Astro o WordPress, revisa [docs/FUNCIONAMIENTO-PROYECTO.md](docs/FUNCIONAMIENTO-PROYECTO.md) para entender la estructura y el flujo general.
+
 ```sh
 npm create astro@latest -- --template blog
 ```
